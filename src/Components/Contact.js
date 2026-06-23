@@ -9,25 +9,57 @@ const Contact = () => {
   });
   
   const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulate API request
-    setSuccess(true);
-    setFormData({
-      name: '',
-      email: '',
-      subject: '',
-      message: ''
-    });
-    setTimeout(() => {
-      setSuccess(false);
-    }, 6000);
+    setSubmitting(true);
+    
+    const payload = {
+      access_key: "7a28c603-974f-4a99-9f13-76b8a4d160f5",
+      name: formData.name,
+      email: formData.email,
+      subject: formData.subject,
+      message: formData.message
+    };
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setSuccess(true);
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: ''
+        });
+        setTimeout(() => {
+          setSuccess(false);
+        }, 6000);
+      } else {
+        console.error("Web3Forms submission failed:", result);
+        alert("Failed to send message: " + (result.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error submitting contact form:", error);
+      alert("An error occurred while sending your message. Please try again later.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -118,8 +150,14 @@ const Contact = () => {
                   </div>
                   <div className="col-lg-12">
                     <fieldset>
-                      <button type="submit" id="form-submit" className="border-button" style={{ border: '2px solid #fff', cursor: 'pointer' }}>
-                        Send Message
+                      <button 
+                        type="submit" 
+                        id="form-submit" 
+                        className="border-button" 
+                        style={{ border: '2px solid #fff', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}
+                        disabled={submitting}
+                      >
+                        {submitting ? 'Sending...' : 'Send Message'}
                       </button>
                     </fieldset>
                   </div>
