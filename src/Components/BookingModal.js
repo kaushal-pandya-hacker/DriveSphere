@@ -23,6 +23,7 @@ const BookingModal = ({ car, onClose }) => {
   const [estimatedPrice, setEstimatedPrice] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [resId, setResId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Default dates (today and tomorrow)
   useEffect(() => {
@@ -72,8 +73,9 @@ const BookingModal = ({ car, onClose }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     const randomId = 'RH-' + Math.floor(100000 + Math.random() * 900000);
     setResId(randomId);
 
@@ -101,6 +103,45 @@ const BookingModal = ({ car, onClose }) => {
       status: 'Active'
     };
 
+    // Web3Forms payload
+    const payload = {
+      access_key: "7a28c603-974f-4a99-9f13-76b8a4d160f5",
+      subject: `New Rental Booking: ${car.name} (${randomId})`,
+      from_name: "RentalHub Reservations",
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      carName: car.name,
+      resId: randomId,
+      pickupLocation: formData.pickupLocation,
+      dropoffLocation: formData.dropoffLocation,
+      pickupDate: formData.pickupDate,
+      pickupTime: formData.pickupTime,
+      returnDate: formData.returnDate,
+      returnTime: formData.returnTime,
+      bookingDays: bookingDays,
+      extras: extraList.join(', ') || 'None',
+      price: `₹${estimatedPrice}`
+    };
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error("Web3Forms booking submission failed:", result);
+      }
+    } catch (error) {
+      console.error("Error submitting booking form to Web3Forms:", error);
+    }
+
     // Save booking to localStorage
     try {
       const existing = localStorage.getItem('rental_bookings');
@@ -111,6 +152,7 @@ const BookingModal = ({ car, onClose }) => {
       console.error("Error saving reservation to storage", err);
     }
 
+    setSubmitting(false);
     setSubmitted(true);
   };
 
@@ -318,7 +360,14 @@ const BookingModal = ({ car, onClose }) => {
                   </div>
                 </div>
 
-                <button type="submit" className="confirm-btn">Confirm Reservation</button>
+                <button 
+                   type="submit" 
+                   className="confirm-btn" 
+                   style={{ cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}
+                   disabled={submitting}
+                 >
+                   {submitting ? 'Confirming...' : 'Confirm Reservation'}
+                 </button>
               </div>
             </div>
           </form>
